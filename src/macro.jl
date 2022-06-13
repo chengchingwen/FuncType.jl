@@ -109,6 +109,7 @@ function functypem(m, ex)
     def[:args] = fargs
     def[:name] = fname
     def[:rtype] = frtype
+    def[:whereparams] = collect(collected_sym)
     func = combinedef(def) |> esc
 
     jlfunc = :(FuncType.jlfunc(::Type{<:$tname}) = $fname) |> esc
