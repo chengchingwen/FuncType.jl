@@ -3,7 +3,11 @@ uuid = "c0c4d893-2c42-4991-9340-5cf81baef85d"
 authors = ["chengchingwen <adgjl5645@hotmail.com> and contributors"]
 version = "0.1.0"
 
+[deps]
+ExprTools = "e2ba6199-217a-4e67-a87a-7c52f15ade04"
+
 [compat]
+ExprTools = "0.1"
 julia = "1.6"
 
 [extras]
