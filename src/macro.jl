@@ -1,4 +1,4 @@
-using Base: isexpr
+using Base.Meta: isexpr
 
 using ExprTools
 
