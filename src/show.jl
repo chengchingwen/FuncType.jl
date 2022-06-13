@@ -33,3 +33,5 @@ function Base.show(io::IO, func::FunctionType)
     print(io, " -> ")
     show_func(io, funcrettype(func), false)
 end
+
+Base.show(io::IO, m::MIME"text/plain", func::FunctionType) = show(io, func)
