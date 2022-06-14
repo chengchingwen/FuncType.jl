@@ -7,12 +7,56 @@ abstract type AbstractTypedFunction <: Function end
 abstract type FunctionType{R, T<:Tuple} <: AbstractTypedFunction end
 
 funcname(f) = sprint(show, f)
+function funcname(F::Type{<:FunctionType})
+    if Base.typename(F) === Base.typename(FunctionType)
+        return "FunctionType"
+    else
+        return sprint(show, F)
+    end
+end
 funcname(func::FunctionType) = nameof(typeof(func))
 
+function unwrap_rewrap_unionall(@nospecialize T::UnionAll)
+    body, var = T.body, T.var
+    wrap = Base.Fix1(UnionAll, var)
+    if body isa UnionAll
+        body, _wrap = unwrap_rewrap_unionall(body)
+        rewrap = wrap ∘ _wrap
+    else
+        rewrap = wrap
+    end
+
+    return body, rewrap
+end
+
+function _functypetypeparam(@nospecialize _F::Type{<:FunctionType})
+    if Base.typename(_F) === Base.typename(FunctionType)
+        if _F isa UnionAll
+            F, rewrap = unwrap_rewrap_unionall(_F)
+        else
+            F, rewrap = _F, identity
+        end
+    else
+        _F = supertype(_F)
+        if _F isa UnionAll
+            F, rewrap = unwrap_rewrap_unionall(_F)
+        else
+            F, rewrap = _F, identity
+        end
+    end
+    return F.parameters, rewrap
+end
+
 funcrettype(::FunctionType{R}) where R = R
-funcrettype(::Type{<:FunctionType{R}}) where R = R
+function funcrettype(@nospecialize _F::Type{<:FunctionType})
+    params, rewrap = _functypetypeparam(_F)
+    return rewrap(params[1])
+end
 funcargtype(::FunctionType{R, T}) where {R, T} = T
-funcargtype(::Type{<:FunctionType{R, T}}) where {R, T} = T
+function funcargtype(@nospecialize _F::Type{<:FunctionType})
+    params, rewrap = _functypetypeparam(_F)
+    return rewrap(params[2])
+end
 
 function jlfunc end
 

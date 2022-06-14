@@ -1,4 +1,4 @@
-struct WrapFunc{R, T, F} <: FunctionType{R, T}
+struct WrapFunc{R, T<:Tuple, F} <: FunctionType{R, T}
     f::F
     function WrapFunc{R, T}(f::F) where {R, T, F}
         R2 = Core.Compiler.return_type(f, T)
