@@ -132,37 +132,40 @@ Create a [`FunctionType`](@ref) with function type signature syntax. Because Jul
 # Example
 ```julia-repl
 julia> @Func Int -> Int   # single input single output
-FunctionType{Int64, Tuple{Int64}}
+FunctionType : Int64 -> Int64
 
 julia> @Func (Int, Float64) -> Float64   # multiple input single output
-FunctionType{Float64, Tuple{Int64, Float64}}
+FunctionType : (Int64, Float64) -> Float64
 
 julia> @Func Int -> (Float64, Float64)   # single input multiple output
-FunctionType{Tuple{Float64, Float64}, Tuple{Int64}}
+FunctionType : Int64 -> (Float64, Float64)
 
 julia> @Func (Int, Int) -> (Float64, Float64)   # multiple input multiple output
-FunctionType{Tuple{Float64, Float64}, Tuple{Int64, Int64}}
+FunctionType : (Int64, Int64) -> (Float64, Float64)
 
 julia> @Func () -> Int   # no input
-FunctionType{Int64, Tuple{}}
+FunctionType : () -> Int64
 
 julia> @Func Tuple{A, A} -> A   # single tuple input
-FunctionType{var"#41#A", Tuple{Tuple{var"#41#A", var"#41#A"}}} where var"#41#A"
+FunctionType : Tuple{var"#133#A", var"#133#A"} -> var"#133#A"
 
 julia> @Func (Tuple{A, B}, B) -> C   # multiple input with tuple argument
-FunctionType{<:Any, Tuple{Tuple{var"#42#A", var"#43#B"}, var"#43#B"}} where {var"#42#A", var"#43#B"}
+FunctionType : (Tuple{var"#134#A", var"#135#B"}, var"#135#B") -> var"#136#C"
 
 julia> @Func T -> T   # type var
-FunctionType{var"#30#T", Tuple{var"#30#T"}} where var"#30#T"
+FunctionType : var"#137#T" -> var"#137#T"
 
 julia> @Func @NamedTuple{x::A, y::A} -> A   # nested macro
-FunctionType{var"#40#A", Tuple{NamedTuple{(:x, :y), Tuple{var"#40#A", var"#40#A"}}}} where var"#40#A"
+FunctionType : NamedTuple{(:x, :y), Tuple{var"#138#A", var"#138#A"}} -> var"#138#A"
 
 julia> @Func (@Func(A -> B), Vector{A}) -> Vector{B}   # higher-order function: `map`
-FunctionType{Vector{var"#15#B"}, Tuple{FunctionType{var"#15#B", Tuple{var"#14#A"}}, Vector{var"#14#A"}}} where {var"#14#A", var"#15#B"}
+FunctionType : (var"#139#A" -> var"#140#B", Array{var"#139#A", 1}) -> Array{var"#140#B", 1}
+
+julia> @Func Vector{@Func(A->A)} -> A   # container of function
+FunctionType : Array{(var"#141#A" -> var"#141#A"), 1} -> var"#141#A"
 
 julia> @Func ((C, A)->(C, B), C, Vector{A}) -> (C, Vector{B})   # scan :: (c -> a -> (c, b)) -> c -> [a] -> (c, [b])
-FunctionType{Tuple{var"#47#C", Vector{var"#46#B"}}, Tuple{FunctionType{Tuple{var"#47#C", var"#46#B"}, Tuple{var"#47#C", var"#45#A"}}, var"#47#C", Vector{var"#45#A"}}} where {var"#45#A", var"#46#B", var"#47#C"}
+FunctionType : ((var"#145#C", var"#143#A") -> (var"#145#C", var"#144#B"), var"#145#C", Array{var"#143#A", 1}) -> (var"#145#C", Array{var"#144#B", 1})
 
 ```
 """
