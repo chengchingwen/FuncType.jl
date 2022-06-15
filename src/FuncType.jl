@@ -16,6 +16,7 @@ function funcname(F::Type{<:FunctionType})
 end
 funcname(func::FunctionType) = nameof(typeof(func))
 
+unwrap_rewrap_unionall(@nospecialize t) = t, identity
 function unwrap_rewrap_unionall(@nospecialize T::UnionAll)
     body, var = T.body, T.var
     wrap = Base.Fix1(UnionAll, var)
@@ -30,28 +31,33 @@ function unwrap_rewrap_unionall(@nospecialize T::UnionAll)
 end
 
 function _functypetypeparam(@nospecialize _F::Type{<:FunctionType})
-    if Base.typename(_F) === Base.typename(FunctionType)
-        if _F isa UnionAll
-            F, rewrap = unwrap_rewrap_unionall(_F)
-        else
-            F, rewrap = _F, identity
-        end
-    else
-        _F = supertype(_F)
-        if _F isa UnionAll
-            F, rewrap = unwrap_rewrap_unionall(_F)
-        else
-            F, rewrap = _F, identity
-        end
-    end
+    _F = Base.typename(_F) === Base.typename(FunctionType) ? _F : supertype(_F)
+    F, rewrap = unwrap_rewrap_unionall(_F)
     return F.parameters, rewrap
 end
 
+functypeparam(F::FunctionType) = funcrettype(F), funcargtype(F)
+function functypeparam(@nospecialize _F::Type{<:FunctionType})
+    params, rewrap = _functypetypeparam(_F)
+    return rewrap(params[1]), rewrap(params[2])
+end
+
+"""
+    funcrettype(::FunctionType)
+
+Get the return type of the given type signature.
+"""
 funcrettype(::FunctionType{R}) where R = R
 function funcrettype(@nospecialize _F::Type{<:FunctionType})
     params, rewrap = _functypetypeparam(_F)
     return rewrap(params[1])
 end
+
+"""
+    funcargtype(::FunctionType)
+
+Get the argument type of the given type signature, must be subtype of `Tuple`.
+"""
 funcargtype(::FunctionType{R, T}) where {R, T} = T
 function funcargtype(@nospecialize _F::Type{<:FunctionType})
     params, rewrap = _functypetypeparam(_F)

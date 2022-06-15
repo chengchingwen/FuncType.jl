@@ -1,111 +1,72 @@
-function _tupletypetypeparam(@nospecialize t::Type{<:Tuple})
-    if t isa UnionAll
-        _T, rewrap = unwrap_rewrap_unionall(t)
-        return map(Tuple(_T.parameters)) do _t
-            if _t isa TypeVar
-                return _t
-            else
-                return rewrap(_t)
+function _show_type_w_func(io::IO, @nospecialize(x), @nospecialize(t = x))
+    x = x isa UnionAll ? Base.unwrap_unionall(x) : x
+    if x isa Union || x isa TypeVar
+        show(io, x)
+    else
+        print(io, Base.typename(x).name)
+        nargs = length(x.parameters)
+        if nargs != 0
+            print(io, '{')
+            for i = 1:nargs
+                xi = x.parameters[i]
+                if !(xi isa Type)
+                    show(io, xi)
+                elseif xi <: FunctionType
+                    show_func(io, Base.rewrap_unionall(xi, t), false)
+                else
+                    _show_type_w_func(io, xi, t)
+                end
+                i != nargs && print(io, ", ")
             end
+            print(io, '}')
         end
-    else
-        return Tuple(t.parameters)
     end
 end
 
-function show_func(io::IO, _t::Type{<:Tuple})
-    t = _tupletypetypeparam(_t)
-    print(io, "Tuple")
-    length(t) == 0 && return print(io, '{', '}')
-    print(io, '{')
-    for i in 1:length(t)-1
-        show_func(io, t[i], true)
-        print(io, ", ")
-    end
-    show_func(io, t[end])
-    print(io, '}')
-end
+show_func(io::IO, @nospecialize(func::FunctionType)) = show_func(io, typeof(func))
 
-function show_func(io::IO, t::Tuple)
-    length(t) == 0 && return print(io, '(', ')')
-    print(io, '(')
-    for i in 1:length(t)-1
-        show_func(io, t[i], true)
-        print(io, ", ")
-    end
-    show_func(io, t[end])
-    print(io, ')')
-end
-show_func(io::IO, f) = show(io, f)
-show_func(io::IO, f::Any, top) = show_func(io, f)
-
-function show_func(io::IO, func::FunctionType, top=true)
+function show_func(io::IO, @nospecialize(F::Type{<:FunctionType}), top=true)
     top || print(io, '(')
-    show_func(io, funcargtype(func), false)
-    print(io, " -> ")
-    show_func(io, funcrettype(func), false)
-    top || print(io, ')')
-end
-
-function show_func(io::IO, t::Core.TypeofVararg)
-    T = isdefined(t, :T) ? t.T : Any
-    if isdefined(t, :N)
-        N = t.N
-        for i = 1:N-1
-            show_func(io, T, true)
-            print(io, ", ")
+    params, rewrap = _functypetypeparam(F)
+    _R, _T = params
+    T = rewrap(_T)
+    narg = length(_T.parameters)
+    narg != 1 && print(io, '(')
+    for i = 1:narg
+        _t = _T.parameters[i]
+        t = Base.rewrap_unionall(_t, T)
+        if t isa Type && t <: FunctionType
+            show_func(io, t, true)
+        else
+            _show_type_w_func(io, _t, t)
         end
-        show_func(io, T, true)
-    else
-        show_func(io, T, true)
-        print(io, "...")
+        i != narg && print(io, ", ")
     end
-end
+    narg != 1 && print(io, ')')
 
-function show_func(io::IO, T::TypeVar)
-    if T.lb === Union{} && T.ub <: Tuple
-        show_func(io, T.ub)
-    else
-        show(io, T)
-    end
-end
-
-function show_func_arg(io::IO, T::TypeVar, top)
-    if T.lb === Union{} && T.ub <: Tuple
-        show_func_arg(io, T.ub)
-    else
-        show(io, T)
-    end
-end
-
-show_func_arg(io::IO, t::Type{<:Tuple}, top=true) = show_func_arg(io, _tupletypetypeparam(t), top)
-function show_func_arg(io::IO, t::Tuple, top=true)
-    length(t) == 0 && return print(io, '(', ')')
-    length(t) == 1 && return show_func(io, t[1], false)
-    print(io, '(')
-    for i in 1:length(t)-1
-        show_func(io, t[i], true)
-        print(io, ", ")
-    end
-    show_func(io, t[end])
-    print(io, ')')
-end
-
-function show_func(io::IO, func::Type{<:FunctionType}, top=true)
-    top || print(io, '(')
-    params, rewrap = _functypetypeparam(func)
-    R, T = params
-    if T isa TypeVar
-        show_func_arg(io, T, false)
-    else
-        show_func_arg(io, rewrap(T), false)
-    end
     print(io, " -> ")
-    if R isa TypeVar
+
+    R = rewrap(_R)
+    if R isa Type && R <: Tuple
+        nret = length(_R.parameters)
+        nret != 1 && print(io, '(')
+        for i = 1:nret
+            _r = _R.parameters[i]
+            r = Base.rewrap_unionall(_r, R)
+            if r isa Type && r <: FunctionType
+                show_func(io, r, true)
+            else
+                _show_type_w_func(io, _r, r)
+            end
+            i != nret && print(io, ", ")
+        end
+        nret != 1 && print(io, ')')
+    elseif R isa Type && R <: FunctionType
         show_func(io, R, false)
     else
-        show_func(io, rewrap(R), false)
+        _show_type_w_func(io, _R, R)
     end
+
     top || print(io, ')')
 end
 
